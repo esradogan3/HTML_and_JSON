@@ -9,11 +9,11 @@ editor: visual
 
 ## Introduction
 
-![Books Selected for the Assignment\
+![Books Selected for the Assignment. \
 Left: Pride and Prejudice \
-Middle: The Song of Achilles \
-Right: This Is How You Lose the Time War \
-Source: Goodreads. https://www.goodreads.com/](images/three_books.png){fig-align="center" width="356"}
+Middle: The Song of Achilles\
+Right: This Is How You Lose the Time War\
+Source: Goodreads. https://www.goodreads.com/](images/three_books.png){fig-align="center"}
 
 For this assignment, I chose three romance novels. Two of them, Pride and Prejudice by Jane Austen and The Song of Achilles by Madeline Miller, are books I have read and really loved. I also needed a book with more than one author, and while I was searching, I found This Is How You Lose the Time War by Amal El-Mohtar and Max Gladstone. I have not read it yet, but I liked its cover design, and it fits well with the other two because all three are romance stories. For each book, I will record the title, the authors, the year it was first published, its genres, and its average rating, using the information on Goodreads. I will create the data myself by writing an HTML file with a table and a JSON file with the same information by hand. Then I will load both files into R as two separate data frames and compare them to check if they are identical.
 
@@ -28,6 +28,94 @@ Some fields have more than one value, such as the authors of This Is How You Los
 
 "identical()" is very strict: it returns FALSE if the two data frames have a different class (for example, a tibble and a data.frame), a different column order, or different number types, such as integer and double, even when the values are the same. To find out whether the difference is only in the structure or also in the values, I will also use "all.equal()", which is more flexible and describes the differences.
 
+## Loading and Comparing the Data
+### Packages
+
+I use the rvest package to read the HTML file and the jsonlite package to read the JSON file.
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(jsonlite)
+```
+
+
+### Loading the HTML File
+
+I read the HTML file from GitHub, select the table in it, and turn the table into a data frame.
+
+```{r}
+html_url <- "https://raw.githubusercontent.com/esradogan3/HTML_and_JSON/refs/heads/main/books.html"
+
+html_df <- read_html(html_url) |>
+  html_element("table") |>
+  html_table()
+
+html_df
+```
+
+### Loading the JSON File
+
+I read the JSON file from GitHub. The \`fromJSON()\` function turns it into a data frame directly. Because I wrote authors and genres as lists, these columns are list columns. This is why they show \`\<chr \[2\]\>\` or \`\<chr \[1\]\>\` instead of the names.
+
+```{r}
+json_url <- "https://raw.githubusercontent.com/esradogan3/HTML_and_JSON/refs/heads/main/books.json"
+
+json_df <- fromJSON(json_url)
+
+json_df
+```
+
+### Comparing the Data Frames
+
+```{r}
+identical(html_df, json_df)
+```
+
+\`identical()\` returned FALSE, so I use \`all.equal()\` to see where the differences are.
+
+```{r}
+all.equal(html_df, json_df)
+```
+
+To see the differences more clearly, I look at the structure of both data frames. `str()` shows the type of each column and its values.
+
+```{r}
+str(html_df)
+str(json_df)
+```
+
+## Conclusion
+
+The two data frames are not identical. There are two differences:
+
+1. They are different types of tables. The HTML data was loaded as a tibble, and the JSON data was loaded as a regular data frame.
+2. Authors and genres are stored differently. In the HTML table, I wrote all the authors or genres of a book in one cell, and `html_table()` reads each cell as one text value. In JSON, I wrote them as arrays (lists), so `fromJSON()` read each author and genre as a separate value.
+
+The title, year and rating columns are the same in both data frames. For the rating dates, they were recorded from Goodreads on October 16, 2026.
+
+### Making the two data frames identical
+
+To check that these were the only two differences, I fixed them in a copy of the JSON data frame. I joined each list of authors and genres into one text with commas, like in the HTML file, and changed the data frame into a tibble. After this, `identical()` returned TRUE, so the two data frames now contain exactly the same data.
+
+```{r}
+json_fixed <- json_df
+
+json_fixed$authors <- sapply(json_fixed$authors, paste, collapse = ", ")
+json_fixed$genres  <- sapply(json_fixed$genres,  paste, collapse = ", ")
+
+json_fixed <- as_tibble(json_fixed)
+
+identical(html_df, json_fixed)
+
+```
+
+### Use of LLM
+
+I used Claude (Anthropic) as a tutor for this assignment. It explained HTML and JSON structure, the R functions I used, and the errors I got, step by step. It also gave me templates for the HTML file, the JSON file and the R code, and I filled them in with my own data. I collected the book data from Goodreads myself. Claude also helped me write and simplify the explanation texts in this document.
+
 ### References
 
-Goodreads. (n.d.). *Goodreads*. [https://www.goodreads.com/](https://www.goodreads.com/?utm_source=chatgpt.com)
+Anthropic. (2026). \*Claude\* (Opus 5.5) \[Large language model\]. https://claude.ai. Accessed October 16, 2026.
+
+Goodreads. (n.d.). *Goodreads*. https://www.goodreads.com
